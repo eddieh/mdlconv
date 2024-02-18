@@ -1,0 +1,16 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Emacs swift-mode also needs, otherwise indentation is whack
+#
+#     (setq swift-mode:parenthesized-expression-offset 4
+#           swift-mode:multiline-statement-offset 4)
+
+
+[Makefile]
+indent_style = tab
