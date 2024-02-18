@@ -6,8 +6,16 @@ import PackageDescription
 
 let package = Package(
     name: "mdlconv",
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-argument-parser",
+                 from: "1.3.0"),
+    ],
     targets: [
         .executableTarget(
-            name: "mdlconv"),
+            name: "mdlconv",
+            dependencies: [
+                .product(name: "ArgumentParser",
+                         package: "swift-argument-parser"),
+            ]),
     ]
 )
