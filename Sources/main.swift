@@ -4,6 +4,7 @@ import ModelIO
 
 enum ModelType: String {
     case Alembic = "abc"
+    case Collada = "dae"
     case UniversalSceneDescription = "usd"
     case UniversalSceneDescriptionText = "usda"
     case UniversalSceneDescriptionBinary = "usdc"
@@ -19,6 +20,8 @@ extension ModelType: CustomStringConvertible {
         switch self {
         case .Alembic:
             return "Alembic"
+        case .Collada:
+            return "Collada"
         case .UniversalSceneDescription:
             return "Universal Scene Description"
         case .UniversalSceneDescriptionText:
@@ -43,6 +46,7 @@ extension ModelType: CustomStringConvertible {
 
 enum ModelError: Error {
     case unableToImport
+    case unableToExport
 }
 
 struct Model {
@@ -50,7 +54,7 @@ struct Model {
     private var asset: MDLAsset?
 
     init(path: String) {
-        self.url = URL(string: path)
+        self.url = URL(fileURLWithPath: path)
     }
 
     var ext: String {
@@ -94,9 +98,16 @@ struct Model {
         self.asset = temp
     }
 
-    var model: MDLAsset {
+    func export() throws {
+        guard let m = self.model else {
+            throw ModelError.unableToExport
+        }
+        try m.export(to: self.url)
+    }
+
+    var model: MDLAsset? {
         get {
-            return self.asset!
+            return self.asset
         }
         set(m) {
             self.asset = m
@@ -139,6 +150,11 @@ struct mdlconv: ParsableCommand {
         }
         modelOut.model = modelIn.model
 
-        // TODO: export model
+        do {
+            try modelOut.export()
+        } catch {
+            print("Unable to export as \(output)")
+            throw ExitCode.failure
+        }
     }
 }
