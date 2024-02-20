@@ -44,6 +44,37 @@ extension ModelType: CustomStringConvertible {
     }
 }
 
+extension MDLMaterialPropertyType: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .none:
+            return "none"
+        case .string:
+            return "string"
+        case .URL:
+            return "URL"
+        case .texture:
+            return "texture"
+        case .color:
+            return "color"
+        case .float:
+            return "float"
+        case .float2:
+            return "float2"
+        case .float3:
+            return "float3"
+        case .float4:
+            return "float4"
+        case .matrix44:
+            return "matrix44"
+        case .buffer:
+            return "buffer"
+        @unknown default:
+            return "unknown"
+        }
+    }
+}
+
 enum ModelError: Error {
     case unableToImport
     case unableToExport
@@ -85,7 +116,7 @@ struct Model {
         // NOTE: The deafult MDLAsset initializer does not return nil
         // (or throw) when it can not open the url, it just exits. We
         // have to use this initializer to get an error we can handle.
-        let temp: MDLAsset? = MDLAsset(
+        let temp: MDLAsset = MDLAsset(
             url: self.url,
             vertexDescriptor: nil,
             bufferAllocator: nil,
@@ -96,6 +127,7 @@ struct Model {
             throw ModelError.unableToImport
         }
         self.asset = temp
+        self.asset?.loadTextures()
     }
 
     func export() throws {
@@ -112,6 +144,88 @@ struct Model {
         set(m) {
             self.asset = m
         }
+    }
+
+    func printObjectTree() throws {
+        guard let m = self.model else {
+            throw ModelError.unableToExport
+        }
+        for i in 0..<m.count {
+            guard let obj = m[i] else {
+                return
+            }
+            format(object: obj, level: 0)
+        }
+    }
+
+    private func padTo(level: UInt) {
+        if level > 0 {
+            for _ in 1...level {
+                print("  ", terminator: "")
+            }
+        }
+    }
+
+    private func format(object: MDLObject, level: UInt) {
+        padTo(level: level)
+        let t = Swift.type(of: object)
+        print("[\(t)]\(object.name)")
+        if let mesh = (object as? MDLMesh) {
+            format(mesh: mesh, level: level)
+        }
+        for i in 0..<object.children.count {
+            let chld: MDLObject = object.children[i]
+            format(object: chld, level: level + 1)
+        }
+    }
+
+    private func format(mesh: MDLMesh, level: UInt) {
+        for i in 0..<(mesh.submeshes?.count ?? 0) {
+            let sub: MDLSubmesh? = mesh.submeshes?[i] as? MDLSubmesh
+            if let mat = sub?.material {
+                format(material: mat, level: level + 1)
+            }
+        }
+    }
+
+    private func format(material: MDLMaterial, level: UInt) {
+        let t = Swift.type(of: material)
+        padTo(level: level)
+        print("[\(t)]\(material.name)")
+        for i in 0..<material.count {
+            let prop = material[i]!
+            // padTo(level: level + 1)
+            // print("[\(prop.type)]\(prop.name)")
+            if prop.type == .texture {
+                padTo(level: level + 1)
+                print("[\(prop.type)]\(prop.name)")
+                let str = (prop.stringValue ?? "")
+                let url = (prop.urlValue ?? URL(string: "")!)
+                if let tex = prop.textureSamplerValue {
+                    format(texture: tex, string: str,
+                           url: url, level: level + 2)
+                }
+            }
+
+        }
+    }
+
+    private func format(texture: MDLTextureSampler,
+                        string: String, url: URL, level: UInt) {
+        guard let tex = texture.texture else {
+            return
+        }
+        // TODO: get or derive the name generically, this works on two
+        // .usdz files, but other files and especially other formats
+        // are sure to work differently
+        let file = self.url.path
+        var name = string
+        if let range = name.range(of: file) {
+            name.replaceSubrange(range, with: "")
+        }
+        let t = Swift.type(of: tex)
+        padTo(level: level)
+        print("[\(t)]\(name)")
     }
 }
 
@@ -148,6 +262,9 @@ struct mdlconv: ParsableCommand {
             print("Unable to import \(input)")
             throw ExitCode.failure
         }
+
+        //try modelIn.printObjectTree()
+
         modelOut.model = modelIn.model
 
         do {
