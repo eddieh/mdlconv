@@ -1,4 +1,3 @@
-import ArgumentParser
 import Foundation
 import ModelIO
 
@@ -40,37 +39,6 @@ extension ModelType: CustomStringConvertible {
             return "Standard Tessellation Language"
         default:
             return "unknown type"
-        }
-    }
-}
-
-extension MDLMaterialPropertyType: CustomStringConvertible {
-    public var description: String {
-        switch self {
-        case .none:
-            return "none"
-        case .string:
-            return "string"
-        case .URL:
-            return "URL"
-        case .texture:
-            return "texture"
-        case .color:
-            return "color"
-        case .float:
-            return "float"
-        case .float2:
-            return "float2"
-        case .float3:
-            return "float3"
-        case .float4:
-            return "float4"
-        case .matrix44:
-            return "matrix44"
-        case .buffer:
-            return "buffer"
-        @unknown default:
-            return "unknown"
         }
     }
 }
@@ -226,52 +194,5 @@ struct Model {
         let t = Swift.type(of: tex)
         padTo(level: level)
         print("[\(t)]\(name)")
-    }
-}
-
-@main
-struct mdlconv: ParsableCommand {
-    @Argument(help: "Input model filename")
-    public var input: String
-
-    @Argument(help: "Output model filename")
-    public var output: String
-
-    public func run() throws {
-        var modelIn: Model! = Model(path: input)
-        var modelOut: Model! = Model(path: output)
-
-        // print(ModelType.WavefrontObject.rawValue)
-        // print(ModelType.WavefrontObject)
-
-        if !modelIn.canImport {
-            let t = modelIn.type.description
-            print("Unable to import \(input): \(t) not supported")
-            throw ExitCode.failure
-        }
-
-        if !modelOut.canExport {
-            let t = modelOut.type.description
-            print("Unable to export as \(output): \(t) not supported")
-            throw ExitCode.failure
-        }
-
-        do {
-            try modelIn.load()
-        } catch {
-            print("Unable to import \(input)")
-            throw ExitCode.failure
-        }
-
-        //try modelIn.printObjectTree()
-
-        modelOut.model = modelIn.model
-
-        do {
-            try modelOut.export()
-        } catch {
-            print("Unable to export as \(output)")
-            throw ExitCode.failure
-        }
     }
 }
